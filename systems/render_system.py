@@ -6,12 +6,13 @@ class RenderSystem:
     def __init__(self, screen):
         self.screen = screen
 
-    def render(self, entity):
-        for component in entity.components:
-            if isinstance(component, Sprite):
-                pygame.draw.circle(
-                    self.screen,
-                    "red",
-                    (entity.position_X, entity.position_Y),
-                    component.width
-                )
+    def render(self, sprite, position=(0, 0), camera=None):
+        if isinstance(sprite, Sprite):
+            surface = sprite.get_surface()
+        else:
+            surface = sprite
+
+        if camera is not None:
+            position = camera.to_screen(position)
+                    
+        self.screen.blit(surface, position)
