@@ -1,6 +1,6 @@
 import pygame
 
-from entities.map_tiled import MapTiled
+from entities.background import Background
 from entities.player import Player
 
 from systems.render_system import RenderSystem
@@ -16,61 +16,20 @@ class WorldGame:
         self.sound_system = SoundSystem()
         self.render_system = RenderSystem(self.screen)
 
-        self.map_tmx_path = 'assets/map/map.tmx'
-        self.tile_layer_order = [
-            'Water',
-            'Ground',
-            'Forest Grass',
-            'Outside Decoration',
-            'Hills',
-            'Fence',
-            'HouseFloor',
-            'HouseWalls',
-            'HouseFurnitureBottom',
-            'HouseFurnitureTop',
-        ]
-        self.object_group_order = [
-            'Trees',
-            'Decoration',
-            'Player',
-            'Objects',
-        ]
-        self.map_entity = MapTiled(
-            tmx_path=self.map_tmx_path,
-            layer_order=self.tile_layer_order,
-            object_group_order=self.object_group_order,
-        )
-
-        self.bottom_layers = [
-            'Water',
-            'Ground',
-            'Forest Grass',
-            'Outside Decoration',
-            'Hills',
-            'Fence',
-            'HouseFloor',
-            'HouseFurnitureBottom',
-        ]
-        self.top_layers = [
-            'HouseWalls',
-            'HouseFurnitureTop',
-        ]
-
+        # Background
+        self.background = Background()
+        background_size = self.background.components['sprite'].get_size()
         self.camera_system = CameraSystem(
             self.screen.get_width(),
             self.screen.get_height(),
-            self.map_entity.world_width,
-            self.map_entity.world_height,
+            background_size[0],
+            background_size[1],
         )
         self.music_bg = pygame.mixer.music.load('assets/sounds/music/music.mp3')
         pygame.mixer.music.play(loops=-1)
         
         # Player
-        player_start = self.map_entity.get_player_start()
-        if player_start is None:
-            spawn = pygame.Vector2(screen.get_width() / 2, screen.get_height() / 2)
-        else:
-            spawn = pygame.Vector2(player_start[0], player_start[1])
+        spawn = pygame.Vector2(screen.get_width() / 2, screen.get_height() / 2)
         self.player = Player(spawn)
 
     def _resolve_animation_state(self, input_state):
@@ -127,13 +86,11 @@ class WorldGame:
         target_y = self.player.position_Y + (player_height / 2)
         self.camera_system.update(target_x, target_y)
         
-        for layer in self.map_entity.get_render_layers(self.bottom_layers):
-            self.render_system.render(layer.surface, layer.position, self.camera_system)
+        # Background
+        self.render_system.render(self.background.components['sprite'], self.background.get_position(), self.camera_system)
 
+        # Player
         self.render_system.render(self.player.components['sprite'], self.player.get_position(), self.camera_system)
-
-        for layer in self.map_entity.get_render_layers(self.top_layers):
-            self.render_system.render(layer.surface, layer.position, self.camera_system)
         
         pygame.display.flip()
         
