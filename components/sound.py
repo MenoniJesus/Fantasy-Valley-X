@@ -1,3 +1,3 @@
 class Sound:
-    def __init__(self, path):
-        self.path = path
+    def __init__(self, path: str):
+        self.path: str = path

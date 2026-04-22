@@ -1,14 +1,24 @@
 import pygame
+from typing import TYPE_CHECKING
 
 from components.sprite import Sprite
 
-class RenderSystem:
-    def __init__(self, screen):
-        self.screen = screen
+if TYPE_CHECKING:
+    from systems.camera_system import CameraSystem
 
-    def render(self, sprite, position=(0, 0), camera=None):
+
+class RenderSystem:
+    def __init__(self, screen: pygame.Surface):
+        self.screen: pygame.Surface = screen
+
+    def render(
+        self,
+        sprite: Sprite | pygame.Surface,
+        position: tuple[float, float] = (0, 0),
+        camera: 'CameraSystem | None' = None,
+    ):
         if isinstance(sprite, Sprite):
-            surface = sprite.get_surface()
+            surface: pygame.Surface = sprite.get_surface()
         else:
             surface = sprite
 

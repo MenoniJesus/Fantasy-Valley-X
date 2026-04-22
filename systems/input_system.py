@@ -1,14 +1,25 @@
 import pygame
+from typing import Sequence, TypedDict
+
+
+class InputState(TypedDict):
+	move_up: bool
+	move_down: bool
+	move_left: bool
+	move_right: bool
+	sprint: bool
+	axe: bool
+	hoe: bool
 
 
 class InputSystem:
 	def __init__(self):
 		pass
 
-	def read(self, events):
+	def read(self, events: Sequence[pygame.event.Event]):
 		keys = pygame.key.get_pressed()
 
-		input_state = {
+		input_state: InputState = {
 			'move_up': keys[pygame.K_w],
 			'move_down': keys[pygame.K_s],
 			'move_left': keys[pygame.K_a],

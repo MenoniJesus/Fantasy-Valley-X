@@ -1,38 +1,48 @@
 import pygame
 
-from entities.background import Background
+from entities.entity import Entity
 from entities.player import Player
+from entities.world import World
 
+from systems.collision_system import CollisionSystem
 from systems.render_system import RenderSystem
 from systems.sound_system import SoundSystem
 from systems.camera_system import CameraSystem
+from systems.input_system import InputState
+
 
 class WorldGame:
-    def __init__(self, screen):
-        self.screen = screen
-        self.last_direction = 'down'
-        self.animation_counter = 0
-        self.animation_step = 10
-        self.sound_system = SoundSystem()
-        self.render_system = RenderSystem(self.screen)
+    def __init__(self, screen: pygame.Surface):
+        self.screen: pygame.Surface = screen
+        self.entities: list[Entity] = []
 
-        # Background
-        self.background = Background()
-        background_size = self.background.components['sprite'].get_size()
+        self.last_direction: str = 'down'
+        self.animation_counter: int = 0
+        self.animation_step: int = 10
+
+        self.sound_system: SoundSystem = SoundSystem()
+        self.render_system: RenderSystem = RenderSystem(self.screen)
+        self.collision_system: CollisionSystem = CollisionSystem()
+
+        self.world = World()
+        self.add_entity(self.world)
+        self.world.start_music()
+
+        spawn = (screen.get_width() / 2, screen.get_height() / 2)
+        self.player = Player(spawn)
+        self.add_entity(self.player)
+
         self.camera_system = CameraSystem(
             self.screen.get_width(),
             self.screen.get_height(),
-            background_size[0],
-            background_size[1],
+            self.world.rect.width,
+            self.world.rect.height,
         )
-        self.music_bg = pygame.mixer.music.load('assets/sounds/music/music.mp3')
-        pygame.mixer.music.play(loops=-1)
-        
-        # Player
-        spawn = pygame.Vector2(screen.get_width() / 2, screen.get_height() / 2)
-        self.player = Player(spawn)
 
-    def _resolve_animation_state(self, input_state):
+    def add_entity(self, entity: Entity):
+        self.entities.append(entity)
+
+    def _resolve_animation_state(self, input_state: InputState):
         moving = (
             input_state['move_up'] or input_state['move_down']
             or input_state['move_left'] or input_state['move_right']
@@ -52,8 +62,8 @@ class WorldGame:
 
         return f'idle_{self.last_direction}'
 
-    def _update_player_animation(self, input_state):
-        animation = self.player.components['animation']
+    def _update_player_animation(self, input_state: InputState):
+        animation = self.player.get_component('animation')
         target_state = self._resolve_animation_state(input_state)
         animation.set_state(target_state)
 
@@ -63,39 +73,73 @@ class WorldGame:
             self.animation_counter = 0
 
         current_frame = animation.get_current_frame()
-        self.player.components['sprite'].set_surface(current_frame)
+        self.player.get_component('sprite').set_surface(current_frame)
 
-    def update(self, dt, input_state):        
+    def _move_player(self, dt: float, input_state: InputState):
         speed = 350 if input_state['sprint'] else 250
+        self.player.set_speed(speed)
 
-        self.player.components['velocity'].set_velocity(speed)
+        move_x = 0.0
+        move_y = 0.0
 
         if input_state['move_up']:
-            self.player.position_Y -= speed * dt
+            move_y -= self.player.speed * dt
         if input_state['move_down']:
-            self.player.position_Y += speed * dt
+            move_y += self.player.speed * dt
         if input_state['move_left']:
-            self.player.position_X -= speed * dt
+            move_x -= self.player.speed * dt
         if input_state['move_right']:
-            self.player.position_X += speed * dt
+            move_x += self.player.speed * dt
 
-        self._update_player_animation(input_state)
+        self.player.move(move_x, move_y)
+        self._clamp_player_to_world()
 
-        player_width, player_height = self.player.components['sprite'].get_size()
-        target_x = self.player.position_X + (player_width / 2)
-        target_y = self.player.position_Y + (player_height / 2)
+    def _clamp_player_to_world(self):
+        max_x = max(0, self.world.rect.width - self.player.rect.width)
+        max_y = max(0, self.world.rect.height - self.player.rect.height)
+
+        self.player.rect.x = max(0, min(self.player.rect.x, max_x))
+        self.player.rect.y = max(0, min(self.player.rect.y, max_y))
+
+    def _update_camera(self):
+        target_x = self.player.rect.centerx
+        target_y = self.player.rect.centery
         self.camera_system.update(target_x, target_y)
-        
-        # Background
-        self.render_system.render(self.background.components['sprite'], self.background.get_position(), self.camera_system)
 
-        # Player
-        self.render_system.render(self.player.components['sprite'], self.player.get_position(), self.camera_system)
-        
+    def update(self, dt: float, input_state: InputState):
+        self._move_player(dt, input_state)
+        self._update_player_animation(input_state)
+        self._update_camera()
+        self.collision_process()
+
+        self.screen.fill((0, 0, 0))
+        self.render(dt)
         pygame.display.flip()
-        
-    def handle_events(self, input_state):
+
+    def render(self, dt: float):
+        for entity in self.entities:
+            sprite = entity.get_component('sprite')
+            if sprite is None:
+                continue
+
+            self.render_system.render(sprite, entity.get_position(), self.camera_system)
+
+    def collision_process(self):
+        collisions: list[tuple[Entity, Entity]] = []
+
+        for entity_a in self.entities:
+            for entity_b in self.entities:
+                if entity_a is entity_b:
+                    continue
+
+                if self.collision_system.are_entities_colliding(entity_a, entity_b):
+                    collisions.append((entity_a, entity_b))
+
+        return collisions
+
+
+    def handle_events(self, input_state: InputState):
         if input_state['axe']:
-            self.sound_system.play_sound(self.player.components['axe_sound'])
+            self.sound_system.play_sound(self.player.get_component('axe_sound'))
         if input_state['hoe']:
-            self.sound_system.play_sound(self.player.components['hoe_sound'])
+            self.sound_system.play_sound(self.player.get_component('hoe_sound'))
