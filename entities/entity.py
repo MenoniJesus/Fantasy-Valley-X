@@ -14,7 +14,6 @@ class Entity:
         position: tuple[float, float],
         size: tuple[float, float] = (0, 0),
         speed: float = 0,
-        max_health: int = 100,
     ):
         self.name: str = name
 
@@ -23,9 +22,6 @@ class Entity:
         self.rect: pygame.FRect = pygame.FRect(float(x), float(y), float(width), float(height))
 
         self.speed: float = float(speed)
-        self.max_health: int = int(max_health)
-        self.health: int = int(max_health)
-
         self.components: dict[str, Any] = {}
 
     def get_position(self):
@@ -37,12 +33,6 @@ class Entity:
 
     def set_speed(self, speed: float):
         self.speed = float(speed)
-
-    def take_damage(self, amount: int):
-        self.health = max(0, self.health - int(amount))
-
-    def heal(self, amount: int):
-        self.health = min(self.max_health, self.health + int(amount))
 
     def add_component(self, name: str, component: 'Component'):
         self.components[name] = component

@@ -8,7 +8,6 @@ class Main:
     def run(self):
         self.game_manager.start()
 
-
 if __name__ == "__main__":
     main: Main = Main()
     main.run()

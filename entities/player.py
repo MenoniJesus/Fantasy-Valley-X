@@ -24,19 +24,16 @@ class Player(Entity):
 
         initial_surface: pygame.Surface = clips['idle_down'][0]
         width, height = initial_surface.get_size()
-        initial_path: str = 'assets/images/character/down_idle/0.png'
 
         spawn_x, spawn_y = position
         super().__init__(
             name='player',
             position=(spawn_x, spawn_y),
             size=(width, height),
-            speed=250,
-            max_health=100,
+            speed=250
         )
 
-        sprite = Sprite(self, initial_path)
-        sprite.set_surface(initial_surface)
+        sprite = Sprite(self, initial_surface)
 
         self.add_component('sprite', sprite)
         self.add_component('collider', Collider(self))
@@ -50,8 +47,5 @@ class Player(Entity):
             for filename in sorted(os.listdir(folder_path))
             if filename.endswith('.png')
         ]
-
-        if not frames:
-            raise ValueError(f'Nenhum frame encontrado em: {folder_path}')
 
         return frames
