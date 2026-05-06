@@ -1,8 +1,11 @@
 import pygame
+from pygame import surface
+from pytmx.util_pygame import load_pygame
 
 from entities.entity import Entity
 from entities.player import Player
 from entities.world import World
+from entities.static_objects import StaticObject
 
 from systems.collision_system import CollisionSystem
 from systems.render_system import RenderSystem
@@ -23,14 +26,20 @@ class WorldGame:
         self.sound_system: SoundSystem = SoundSystem()
         self.render_system: RenderSystem = RenderSystem(self.screen)
         self.collision_system: CollisionSystem = CollisionSystem()
+        self.debug_colliders: bool = True
 
+        # Cria e adiciona entidade do mundo
         self.world = World()
         self.add_entity(self.world)
         self.world.start_music()
 
-        spawn = (screen.get_width() / 2, screen.get_height() / 2)
-        self.player = Player(spawn)
+        # Cria e adiciona entidade do player
+        self.player = Player(self.world.spawn)
         self.add_entity(self.player)
+        self._player_prev_pos: tuple[float, float] = self.player.get_position()
+
+        # Cria os objetos estáticos do mapa
+        self.load_static_objects()
 
         self.camera_system = CameraSystem(
             self.screen.get_width(),
@@ -38,6 +47,29 @@ class WorldGame:
             self.world.rect.width,
             self.world.rect.height,
         )
+
+    def load_static_objects(self):
+        tmx_data = load_pygame('assets/map/map.tmx')
+        
+        # Trees
+        for obj in tmx_data.get_layer_by_name('Trees'):
+            static_object = StaticObject(
+                name='Tree',
+                position=(obj.x, obj.y),
+                surface=obj.image
+            )
+            
+            self.add_entity(static_object)
+            
+        # Decoration
+        for obj in tmx_data.get_layer_by_name('Decoration'):
+            static_object = StaticObject(
+                name='Decoration',
+                position=(obj.x, obj.y),
+                surface=obj.image
+            )
+            
+            self.add_entity(static_object)
 
     def add_entity(self, entity: Entity):
         self.entities.append(entity)
@@ -76,6 +108,8 @@ class WorldGame:
         self.player.get_component('sprite').set_surface(current_frame)
 
     def _move_player(self, dt: float, input_state: InputState):
+        self._player_prev_pos = self.player.get_position()
+
         speed = 350 if input_state['sprint'] else 250
         self.player.set_speed(speed)
 
@@ -124,21 +158,45 @@ class WorldGame:
 
             self.render_system.render(sprite, entity.get_position(), self.camera_system)
 
-    def collision_process(self):
-        collisions: list[tuple[Entity, Entity]] = []
+        if self.debug_colliders:
+            self._draw_colliders()
 
+    def _draw_colliders(self):
+        debug_color = (255, 0, 0)
+
+        for entity in self.entities:
+            colliders = self.collision_system.get_colliders(entity)
+            for collider in colliders:
+                rect = collider.get_rect()
+                screen_x, screen_y = self.camera_system.to_screen((rect.x, rect.y))
+                debug_rect = pygame.FRect(screen_x, screen_y, rect.width, rect.height)
+                pygame.draw.rect(self.screen, debug_color, debug_rect, 2)
+
+    def collision_process(self):
         for entity_a in self.entities:
             for entity_b in self.entities:
                 if entity_a is entity_b:
                     continue
 
-                if self.collision_system.are_entities_colliding(entity_a, entity_b):
-                    collisions.append((entity_a, entity_b))
+                collision = self.collision_system.check_collision(
+                    entity_a,
+                    entity_b,
+                    player_prev_pos=self._player_prev_pos,
+                )
 
-        return collisions
-
-
+                if collision:
+                    if (isinstance(entity_a, Player) or isinstance(entity_b, Player)):
+                        if collision in {'left', 'right'}:
+                            self.player.rect.x = self._player_prev_pos[0]
+                        elif collision in {'up', 'down'}:
+                            self.player.rect.y = self._player_prev_pos[1]
+                        elif collision == 'both':
+                            self.player.rect.x = self._player_prev_pos[0]
+                            self.player.rect.y = self._player_prev_pos[1]
+                    
     def handle_events(self, input_state: InputState):
+        if input_state['toggle_debug']:
+            self.debug_colliders = not self.debug_colliders
         if input_state['axe']:
             self.sound_system.play_sound(self.player.get_component('axe_sound'))
         if input_state['hoe']:

@@ -1,11 +1,6 @@
 import pygame
-from typing import TYPE_CHECKING
 
 from components.sprite import Sprite
-
-if TYPE_CHECKING:
-    from systems.camera_system import CameraSystem
-
 
 class RenderSystem:
     def __init__(self, screen: pygame.Surface):

@@ -10,6 +10,7 @@ class InputState(TypedDict):
 	sprint: bool
 	axe: bool
 	hoe: bool
+	toggle_debug: bool
 
 
 class InputSystem:
@@ -27,6 +28,7 @@ class InputSystem:
 			'sprint': keys[pygame.K_LSHIFT],
 			'axe': False,
 			'hoe': False,
+			'toggle_debug': False,
 		}
 
 		for event in events:
@@ -35,5 +37,7 @@ class InputSystem:
 					input_state['axe'] = True
 				if event.key == pygame.K_e:
 					input_state['hoe'] = True
+				if event.key == pygame.K_h:
+					input_state['toggle_debug'] = True
 
 		return input_state

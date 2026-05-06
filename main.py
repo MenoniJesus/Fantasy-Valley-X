@@ -1,6 +1,5 @@
 from core.game_manager import GameManager
 
-
 class Main:
     def __init__(self):
         self.game_manager: GameManager = GameManager()

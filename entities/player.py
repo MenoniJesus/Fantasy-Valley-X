@@ -8,7 +8,6 @@ from components.sound import Sound
 from components.sprite import Sprite
 from entities.entity import Entity
 
-
 class Player(Entity):
     def __init__(self, position: tuple[float, float]):
         clips: dict[str, list[pygame.Surface]] = {
@@ -36,7 +35,7 @@ class Player(Entity):
         sprite = Sprite(self, initial_surface)
 
         self.add_component('sprite', sprite)
-        self.add_component('collider', Collider(self))
+        self.add_component('collider', Collider(self, offset=(56, 32), size=(60, 64)))
         self.add_component('animation', Animation(clips=clips, initial_state='idle_down'))
         self.add_component('axe_sound', Sound('assets/sounds/sfx/axe.mp3'))
         self.add_component('hoe_sound', Sound('assets/sounds/sfx/hoe.wav'))

@@ -1,9 +1,5 @@
 import pygame
-from typing import TYPE_CHECKING, Any, TypeVar
-
-if TYPE_CHECKING:
-    from components.component import Component
-
+from typing import Any, TypeVar
 
 TComponent = TypeVar('TComponent')
 
@@ -26,6 +22,9 @@ class Entity:
 
     def get_position(self):
         return (self.rect.x, self.rect.y)
+
+    def get_size(self):
+        return (self.rect.width, self.rect.height)
 
     def move(self, delta_x: float, delta_y: float):
         self.rect.x += float(delta_x)

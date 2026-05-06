@@ -1,11 +1,6 @@
 import pygame
-from typing import TYPE_CHECKING
 
 from components.component import Component
-
-if TYPE_CHECKING:
-    from entities.entity import Entity
-
 
 class Collider(Component):
     def __init__(

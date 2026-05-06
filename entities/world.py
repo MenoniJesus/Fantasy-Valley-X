@@ -1,14 +1,18 @@
 import pygame
 
 from components.sprite import Sprite
+from components.collider import Collider
+
 from entities.entity import Entity
+from entities.static_objects import StaticObject
+
 from pytmx.util_pygame import load_pygame
 
 class World(Entity):
     def __init__(
         self,
         map_path: str = 'assets/map/map.tmx',
-        layers_name: list[str] = ['Ground', 'Water', 'Forest Grass', 'Hills', 'Fence', 'HouseFloor', 'HouseWalls', 'HouseFurnitureBottom', 'HouseFurnitureTop', 'Outside Decoration'],
+        layers_name: list[str] = ['Water', 'Ground', 'Forest Grass', 'Outside Decoration', 'Hills', 'Fence', 'HouseFloor', 'HouseWalls', 'HouseFurnitureBottom', 'HouseFurnitureTop'],
         music_path: str = 'assets/sounds/music/music.mp3',
     ):
         tmx_data = load_pygame(map_path)
@@ -32,6 +36,21 @@ class World(Entity):
 
         self.music_path: str = music_path
         self._music_started: bool = False
+
+        # Salva posição spwan do player
+        for obj in tmx_data.get_layer_by_name('Player'):
+            if obj.name == 'Start':
+                self.spawn = (obj.x, obj.y)
+
+        # Colisao mapeada pela Layer Collision
+        collision_layer = tmx_data.get_layer_by_name('Collision')
+        for index, (x, y, _tile_image) in enumerate(collision_layer.tiles()):
+            collider = Collider(
+                self,
+                offset=(x * tmx_data.tilewidth, y * tmx_data.tileheight),
+                size=(tmx_data.tilewidth, tmx_data.tileheight)
+            )
+            self.add_component(f'collider_{index}', collider)
 
     def start_music(self):
         if self._music_started:
