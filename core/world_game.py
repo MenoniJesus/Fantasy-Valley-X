@@ -1,5 +1,4 @@
 import pygame
-from pygame import surface
 from pytmx.util_pygame import load_pygame
 
 from entities.entity import Entity
@@ -12,7 +11,6 @@ from systems.render_system import RenderSystem
 from systems.sound_system import SoundSystem
 from systems.camera_system import CameraSystem
 from systems.input_system import InputState
-
 
 class WorldGame:
     def __init__(self, screen: pygame.Surface):
@@ -195,9 +193,16 @@ class WorldGame:
                             self.player.rect.y = self._player_prev_pos[1]
                     
     def handle_events(self, input_state: InputState):
+        if input_state['use_tool']:
+            if self.player.tool_in_use == 0: # Hoe
+                self.player.cut_grass(self.world, self.last_direction)
+                
+                
+            elif self.player.tool_in_use == 1: # Axe
+                pass
+            
+            elif self.player.tool_in_use == 2: # Watering Can
+                pass
+        
         if input_state['toggle_debug']:
             self.debug_colliders = not self.debug_colliders
-        if input_state['axe']:
-            self.sound_system.play_sound(self.player.get_component('axe_sound'))
-        if input_state['hoe']:
-            self.sound_system.play_sound(self.player.get_component('hoe_sound'))

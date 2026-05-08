@@ -11,6 +11,7 @@ class InputState(TypedDict):
 	axe: bool
 	hoe: bool
 	toggle_debug: bool
+	use_tool: bool
 
 
 class InputSystem:
@@ -25,19 +26,17 @@ class InputSystem:
 			'move_down': keys[pygame.K_s],
 			'move_left': keys[pygame.K_a],
 			'move_right': keys[pygame.K_d],
-			'sprint': keys[pygame.K_LSHIFT],
-			'axe': False,
-			'hoe': False,
-			'toggle_debug': False,
+			'sprint': keys[pygame.K_LSHIFT],			
+   			'toggle_debug': False,
+			'use_tool': False
 		}
 
 		for event in events:
 			if event.type == pygame.KEYDOWN:
-				if event.key == pygame.K_SPACE:
-					input_state['axe'] = True
-				if event.key == pygame.K_e:
-					input_state['hoe'] = True
 				if event.key == pygame.K_h:
 					input_state['toggle_debug'] = True
+			
+				if event.key == pygame.K_e:
+					input_state['use_tool'] = True
 
 		return input_state
