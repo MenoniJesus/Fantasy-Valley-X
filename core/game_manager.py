@@ -1,7 +1,7 @@
 import pygame
 
 from core.settings import *
-from core.world_game import WorldGame
+from core.game_world import WorldGame
 from systems.input_system import InputState, InputSystem
 
 

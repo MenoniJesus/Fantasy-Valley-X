@@ -72,34 +72,5 @@ class Player(Entity):
 
         return frames
 
-    def cut_grass(self, world: World, direction: str):
-        target_tile = self._get_tool_target_tile(world, direction)
-        if target_tile is None:
-            return
-
-        tile_x, tile_y = target_tile
-        if world.till_soil(tile_x, tile_y):
-            print('Bora arar a terra')
-
-    def _get_tool_target_tile(self, world: World, direction: str) -> tuple[int, int] | None:
-        tile_w = world.tile_width
-        tile_h = world.tile_height
-        center_x, center_y = self.rect.center
-
-        if direction == 'up':
-            target_x, target_y = center_x, center_y - tile_h
-        elif direction == 'down':
-            target_x, target_y = center_x, center_y + tile_h
-        elif direction == 'left':
-            target_x, target_y = center_x - tile_w, center_y
-        elif direction == 'right':
-            target_x, target_y = center_x + tile_w, center_y
-        else:
-            return None
-
-        if not (0 <= target_x < world.rect.width and 0 <= target_y < world.rect.height):
-            return None
-
-        tile_x = int(target_x // tile_w)
-        tile_y = int(target_y // tile_h)
-        return (tile_x, tile_y)
+    def cut_grass(self):
+        print('Bora arar a terra')

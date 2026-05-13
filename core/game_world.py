@@ -195,8 +195,7 @@ class WorldGame:
     def handle_events(self, input_state: InputState):
         if input_state['use_tool']:
             if self.player.tool_in_use == 0: # Hoe
-                self.player.cut_grass(self.world, self.last_direction)
-                
+                self.player.cut_grass()
                 
             elif self.player.tool_in_use == 1: # Axe
                 pass
