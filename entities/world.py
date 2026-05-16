@@ -75,7 +75,7 @@ class World(Entity):
                 offset=(x_axis * tmx_data.tilewidth, y_axis * tmx_data.tileheight),
                 size=(tmx_data.tilewidth, tmx_data.tileheight)
             )
-            self.matrix_components[y_axis][x_axis] = collider
+            self.add_component(f'collider_{x_axis}_{y_axis}', collider)
         
         # Carrega camada de farmable
         farmable_layer = tmx_data.get_layer_by_name('Farmable')

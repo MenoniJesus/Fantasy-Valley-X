@@ -106,8 +106,6 @@ class WorldGame:
         self.player.get_component('sprite').set_surface(current_frame)
 
     def _move_player(self, dt: float, input_state: InputState):
-        self._player_prev_pos = self.player.get_position()
-
         speed = 350 if input_state['sprint'] else 250
         self.player.set_speed(speed)
 
@@ -176,22 +174,17 @@ class WorldGame:
                 if entity_a is entity_b:
                     continue
 
-                collision = self.collision_system.check_collision(
+                is_collision = self.collision_system.check_colliders(
                     entity_a,
-                    entity_b,
-                    player_prev_pos=self._player_prev_pos,
+                    entity_b
                 )
-
-                if collision:
-                    if (isinstance(entity_a, Player) or isinstance(entity_b, Player)):
-                        if collision in {'left', 'right'}:
-                            self.player.rect.x = self._player_prev_pos[0]
-                        elif collision in {'up', 'down'}:
-                            self.player.rect.y = self._player_prev_pos[1]
-                        elif collision == 'both':
-                            self.player.rect.x = self._player_prev_pos[0]
-                            self.player.rect.y = self._player_prev_pos[1]
-                    
+                
+                if (is_collision and entity_a.name == 'player') or (is_collision and entity_b.name == 'player'):
+                    if (isinstance(entity_a, Player)):
+                        pass
+                    elif (isinstance(entity_b, Player)):
+                        pass
+ 
     def handle_events(self, input_state: InputState):
         if input_state['use_tool']:
             if self.player.tool_in_use == 0: # Hoe
