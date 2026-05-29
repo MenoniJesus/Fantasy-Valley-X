@@ -1,27 +1,34 @@
+import pygame
+
 from components.collider import Collider
 from entities.entity import Entity
-from entities.player import Player
+
+
+def get_mtv(rect_a: pygame.FRect, rect_b: pygame.FRect) -> pygame.Vector2 | None:
+    intersection: pygame.FRect = rect_a.clip(rect_b)
+
+    if intersection.width == 0 or intersection.height == 0:
+        return None
+
+    overlap_x: float = intersection.width
+    overlap_y: float = intersection.height
+
+    center_a: pygame.Vector2 = pygame.Vector2(rect_a.centerx, rect_a.centery)
+    center_b: pygame.Vector2 = pygame.Vector2(rect_b.centerx, rect_b.centery)
+
+    if overlap_x < overlap_y:
+        # Menor no eixo X
+        sign_x: float = -1.0 if center_a.x < center_b.x else 1.0
+        return pygame.Vector2(sign_x * overlap_x, 0.0)
+    else:
+        # Menor no eixo Y
+        sign_y: float = -1.0 if center_a.y < center_b.y else 1.0
+        return pygame.Vector2(0.0, sign_y * overlap_y)
+
 
 class CollisionSystem:
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def get_colliders(self, entity: Entity):
+    def get_colliders(self, entity: Entity) -> list[Collider]:
         return entity.get_components_by_type(Collider)
-
-    def check_colliders(self, entity_a: Entity, entity_b: Entity):
-        colliders_a: list[Collider] = self.get_colliders(entity_a)
-        colliders_b: list[Collider] = self.get_colliders(entity_b)
-
-        if not colliders_a or not colliders_b:
-            return False
-
-        for collider_a in colliders_a:
-            rect_a = collider_a.get_rect()
-
-            for collider_b in colliders_b:
-                rect_b = collider_b.get_rect()
-                if rect_a.colliderect(rect_b):
-                    return True
-                
-        return False

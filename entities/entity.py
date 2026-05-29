@@ -3,59 +3,61 @@ from typing import Any, TypeVar
 
 TComponent = TypeVar('TComponent')
 
+
 class Entity:
     def __init__(
         self,
         name: str,
-        position: tuple[float, float],
-        size: tuple[float, float] = (0, 0),
+        position: pygame.Vector2,
+        size: pygame.Vector2 = pygame.Vector2(0, 0),
         speed: float = 0,
     ):
         self.name: str = name
 
-        x, y = position
-        width, height = size
-        self.rect: pygame.FRect = pygame.FRect(float(x), float(y), float(width), float(height))
+        pos: pygame.Vector2 = pygame.Vector2(position)
+        sz: pygame.Vector2 = pygame.Vector2(size)
+        self.rect: pygame.FRect = pygame.FRect(
+            float(pos.x), float(pos.y),
+            float(sz.x),  float(sz.y),
+        )
 
         self.speed: float = float(speed)
         self.components: dict[str, Any] = {}
 
-    def get_position(self):
-        return (self.rect.x, self.rect.y)
+    def get_position(self) -> pygame.Vector2:
+        return pygame.Vector2(self.rect.x, self.rect.y)
 
-    def get_size(self):
-        return (self.rect.width, self.rect.height)
+    def get_size(self) -> pygame.Vector2:
+        return pygame.Vector2(self.rect.width, self.rect.height)
 
-    def move(self, delta_x: float, delta_y: float):
+    def move(self, delta_x: float, delta_y: float) -> None:
         self.rect.x += float(delta_x)
         self.rect.y += float(delta_y)
 
-    def set_speed(self, speed: float):
+    def set_speed(self, speed: float) -> None:
         self.speed = float(speed)
 
-    def add_component(self, name: str, component: 'Component'):
+    def add_component(self, name: str, component: 'Component') -> None:
         self.components[name] = component
 
-    def remove_component(self, name: str):
+    def remove_component(self, name: str) -> None:
         if name in self.components:
             del self.components[name]
 
-    def get_component(self, name: str):
+    def get_component(self, name: str) -> Any:
         return self.components.get(name)
 
-    def get_components_by_type(self, component_type: type[TComponent]):
+    def get_components_by_type(self, component_type: type[TComponent]) -> list[TComponent]:
         results: list[TComponent] = []
-
         for component in self.components.values():
             if isinstance(component, component_type):
                 results.append(component)
-
         return results
 
-    def update(self, dt: float):
+    def update(self, dt: float) -> None:
         pass
 
-    def render(self, dt: float):
+    def render(self, dt: float) -> None:
         for component in self.components.values():
             if hasattr(component, 'render'):
                 component.render(dt)
