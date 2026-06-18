@@ -53,9 +53,6 @@ class World(Entity):
         self.add_component('sprite', sprite)
 
         # Salva posicao de spawn do player, posicao da cama e do trader como Vector2
-        self.spawn: pygame.Vector2 = pygame.Vector2(0, 0)
-        self.bed_position: pygame.Vector2 = pygame.Vector2(0, 0)
-        self.trader_position: pygame.Vector2 = pygame.Vector2(0, 0)
         for obj in tmx_data.get_layer_by_name('Player'):
             if obj.name == 'Start':
                 self.spawn = pygame.Vector2(obj.x, obj.y)
@@ -63,6 +60,8 @@ class World(Entity):
                 self.bed_position = pygame.Vector2(obj.x, obj.y)
             if obj.name == 'Trader':
                 self.trader_position = pygame.Vector2(obj.x, obj.y)
+            if obj.name == "Npc":
+                self.milo_position = pygame.Vector2(obj.x, obj.y)
 
         self.load_components_world(tmx_data)
 

@@ -10,7 +10,6 @@ class Entity:
         name: str,
         position: pygame.Vector2,
         size: pygame.Vector2 = pygame.Vector2(0, 0),
-        speed: float = 0,
     ):
         self.name: str = name
 
@@ -21,7 +20,6 @@ class Entity:
             float(sz.x),  float(sz.y),
         )
 
-        self.speed: float = float(speed)
         self.components: dict[str, Any] = {}
 
     def get_position(self) -> pygame.Vector2:
@@ -33,9 +31,6 @@ class Entity:
     def move(self, delta_x: float, delta_y: float) -> None:
         self.rect.x += float(delta_x)
         self.rect.y += float(delta_y)
-
-    def set_speed(self, speed: float) -> None:
-        self.speed = float(speed)
 
     def add_component(self, name: str, component: 'Component') -> None:
         self.components[name] = component

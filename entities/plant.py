@@ -1,11 +1,11 @@
 import pygame
 
+from entities.static_objects import StaticObject
 from components.sprite import Sprite
-from entities.entity import Entity
 from core.settings import TILE_SIZE
 
 
-class Plant(Entity):
+class Plant(StaticObject):
     def __init__(self, name: str, tile_pos: tuple[int, int]):
         tile_x, tile_y = tile_pos
 

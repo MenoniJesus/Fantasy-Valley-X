@@ -1,12 +1,12 @@
 import pygame
 
+from entities.static_objects import StaticObject
 from components.sprite import Sprite
 from components.collider import Collider
-from entities.entity import Entity
 from core.collision_layers import LAYER_WORLD, MASK_WORLD
 
 
-class Trader(Entity):
+class Trader(StaticObject):
     # Edite aqui para alterar o que o trader compra e vende e seus precos
     # Regra de equilibrio: preco da semente < preco do fruto que ela produz
     SHOP_CATALOG: list[dict] = [

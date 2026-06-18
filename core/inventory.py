@@ -2,7 +2,6 @@ from dataclasses import dataclass, field
 
 import pygame
 
-
 @dataclass
 class Item:
     name: str
@@ -15,7 +14,6 @@ def _load_icon(path: str) -> pygame.Surface:
     return pygame.transform.scale(
         pygame.image.load(path).convert_alpha(), (48, 48)
     )
-
 
 class Inventory:
     SLOTS: int = 9

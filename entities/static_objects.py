@@ -2,24 +2,18 @@ import pygame
 
 from entities.entity import Entity
 from components.sprite import Sprite
-from components.collider import Collider
 
 
 class StaticObject(Entity):
-    def __init__(self, name: str, position: pygame.Vector2, surface: pygame.Surface):
-        w, h = surface.get_size()
-        super().__init__(
-            name=name,
-            position=pygame.Vector2(position),
-            size=pygame.Vector2(w, h),
-        )
-
-        collider = Collider(
-            self,
-            offset=pygame.Vector2(0, 0),
-            size=pygame.Vector2(w, h),
-        )
-        self.add_component('collider', collider)
-
-        sprite = Sprite(self, surface)
-        self.add_component('sprite', sprite)
+    def __init__(
+        self,
+        name: str,
+        position: pygame.Vector2,
+        size: pygame.Vector2 | None = None,
+        surface: pygame.Surface | None = None,
+    ):
+        if size is None:
+            size = pygame.Vector2(surface.get_size()) if surface is not None else pygame.Vector2(0, 0)
+        super().__init__(name=name, position=position, size=size)
+        if surface is not None:
+            self.add_component('sprite', Sprite(self, surface))

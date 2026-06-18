@@ -7,6 +7,7 @@ from entities.world import World
 from entities.static_objects import StaticObject
 from entities.plant import Plant
 from entities.trader import Trader
+from entities.npc_milo import MiloNPC
 
 from components.collider import Collider
 from core.collision_layers import LAYER_WORLD, LAYER_FARMABLE, LAYER_TOOL
@@ -55,8 +56,11 @@ class WorldGame:
         self.player = Player(self.world.spawn)
         self.add_entity(self.player)
 
-        self.trader = Trader(pygame.Vector2(962, 442))
+        self.trader = Trader(self.world.trader_position)
         self.add_entity(self.trader)
+
+        self.milo: MiloNPC = MiloNPC(self.world.milo_position)
+        self.add_entity(self.milo)
 
         # Cria os objetos estaticos do mapa
         self.load_static_objects()
@@ -164,6 +168,10 @@ class WorldGame:
         tool_rect = self.player.get_component('tool_collider').get_rect()
         return tool_rect.colliderect(self.trader.rect)
 
+    def _is_facing_milo(self) -> bool:
+        tool_rect = self.player.get_component('tool_collider').get_rect()
+        return tool_rect.colliderect(self.milo.rect)
+
     def _get_front_tile(self) -> tuple[int, int]:
         center: pygame.Vector2 = pygame.Vector2(
             self.player.get_component('collider').get_rect().center
@@ -182,18 +190,26 @@ class WorldGame:
         return int(tile_x + delta.x), int(tile_y + delta.y)
 
     def update(self, dt: float, input_state: InputState) -> None:
-        self._move_player(dt, input_state)
-        self._update_player_animation(input_state)
+        if not self.milo.dialog_box.is_open:
+            self._move_player(dt, input_state)
+            self._update_player_animation(input_state)
         self.player.update_tool_collider()
         self._update_camera()
         self.collision_process()
         self.sky_system.update(dt)
+        self.milo.dialog_box.update(dt)
 
         self.screen.fill((0, 0, 0))
         self.render(dt)
-        if not self.shop_system.is_open:
+        if not self.shop_system.is_open and not self.milo.dialog_box.is_open:
             self._draw_tool_indicator()
         pygame.display.flip()
+
+        # AI call after flip so the "..." frame is already visible to the player
+        if self.milo.dialog_box.has_pending_input:
+            user_msg: str = self.milo.dialog_box.get_and_clear_pending()
+            response: str = self.milo.send_message(user_msg)
+            self.milo.dialog_box.show_response(response)
 
     def render(self, dt: float) -> None:
         camera_offset: pygame.Vector2 = pygame.Vector2(
@@ -234,6 +250,8 @@ class WorldGame:
 
         if self.shop_system.is_open:
             self.shop_system.render(self.screen, self.player)
+        elif self.milo.dialog_box.is_open:
+            pass  # dialog renders below HUD
         elif self._is_facing_trader():
             hint: pygame.Surface = self._sleep_font.render(
                 'Pressione F para interagir', True, (255, 255, 255)
@@ -242,8 +260,19 @@ class WorldGame:
                 hint,
                 (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 160)
             )
+        elif self._is_facing_milo():
+            hint = self._sleep_font.render(
+                'Pressione F para conversar', True, (255, 255, 255)
+            )
+            self.screen.blit(
+                hint,
+                (SCREEN_WIDTH // 2 - hint.get_width() // 2, SCREEN_HEIGHT - 160)
+            )
 
         self.hud_system.render(self.screen, self.player.inventory, self.player)
+
+        if self.milo.dialog_box.is_open:
+            self.milo.dialog_box.render(self.screen)
 
     def _draw_colliders(self) -> None:
         for entity in self.entities:
@@ -385,11 +414,17 @@ class WorldGame:
             plant.advance_day()
 
     def handle_events(self, input_state: InputState) -> None:
+        if self.milo.dialog_box.is_open:
+            self.milo.dialog_box.handle_input(input_state)
+            return
+
         if input_state['plant']:
             if self.shop_system.is_open:
                 self.shop_system.close()
             elif self._is_facing_trader():
                 self.shop_system.open(self.trader.SHOP_CATALOG)
+            elif self._is_facing_milo():
+                self.milo.open_dialog()
 
         if input_state['close_shop'] and self.shop_system.is_open:
             self.shop_system.close()

@@ -7,14 +7,14 @@ from components.collider import Collider
 from components.sound import Sound
 from components.sprite import Sprite
 
-from entities.entity import Entity
+from entities.dynamic_object import DynamicObject
 
 from core.collision_layers import LAYER_PLAYER, LAYER_TOOL, MASK_PLAYER, MASK_TOOL
 from core.inventory import Inventory
 from core.settings import TILE_SIZE
 
 
-class Player(Entity):
+class Player(DynamicObject):
     def __init__(self, position: pygame.Vector2):
         clips: dict[str, list[pygame.Surface]] = {
             # Movimentacao

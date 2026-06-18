@@ -4,7 +4,6 @@ from core.settings import *
 from core.game_world import WorldGame
 from systems.input_system import InputState, InputSystem
 
-
 class GameManager:
     def __init__(self):
         pygame.init()
