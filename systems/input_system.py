@@ -17,6 +17,8 @@ class InputState(TypedDict):
 	arrow_down: bool
 	confirm: bool
 	close_shop: bool
+	backspace: bool
+	text_input: str
 	selected_slot: int | None
 
 
@@ -42,6 +44,8 @@ class InputSystem:
 			'arrow_down': False,
 			'confirm': False,
 			'close_shop': False,
+			'backspace': False,
+			'text_input': '',
 			'selected_slot': None,
 		}
 
@@ -68,14 +72,19 @@ class InputSystem:
 				if event.key == pygame.K_ESCAPE:
 					input_state['close_shop'] = True
 
+				if event.key == pygame.K_BACKSPACE:
+					input_state['backspace'] = True
+
 				if event.key == pygame.K_UP:
 					input_state['arrow_up'] = True
 
 				if event.key == pygame.K_DOWN:
 					input_state['arrow_down'] = True
 
-				# Teclas 1–9 selecionam slots 0–8
 				if pygame.K_1 <= event.key <= pygame.K_9:
 					input_state['selected_slot'] = event.key - pygame.K_1
+
+			elif event.type == pygame.TEXTINPUT:
+				input_state['text_input'] += event.text
 
 		return input_state

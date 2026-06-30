@@ -19,55 +19,77 @@ class DialogPhase(Enum):
 
 BOX_MARGIN_X: int = 40
 BOX_MARGIN_BOTTOM: int = 20
-BOX_HEIGHT: int = 165
-BOX_PADDING: int = 14
+BOX_HEIGHT: int = 250
+BOX_PADDING: int = 16
+PORTRAIT_SIZE: int = 96
+BORDER_RADIUS: int = 16
 
-BOX_COLOR: tuple[int, int, int, int] = (20, 15, 10, 215)
-BORDER_COLOR: tuple[int, int, int] = (160, 130, 60)
-TEXT_COLOR: tuple[int, int, int] = (255, 245, 200)
-NAME_COLOR: tuple[int, int, int] = (255, 215, 0)
-HINT_COLOR: tuple[int, int, int] = (140, 120, 80)
-INPUT_BG: tuple[int, int, int] = (30, 22, 14)
-INPUT_BORDER: tuple[int, int, int] = (100, 80, 40)
+BOX_X: int = BOX_MARGIN_X
+BOX_W: int = SCREEN_WIDTH - 2 * BOX_MARGIN_X
+BOX_Y: int = SCREEN_HEIGHT - BOX_HEIGHT - BOX_MARGIN_BOTTOM
+
+CONTENT_X: int = BOX_X + BOX_PADDING + PORTRAIT_SIZE + BOX_PADDING
+CONTENT_W: int = BOX_X + BOX_W - BOX_PADDING - CONTENT_X
+
+BOX_BG: tuple[int, int, int, int] = (62, 41, 26, 235)
+BORDER_COLOR: tuple[int, int, int] = (224, 173, 92)
+BORDER_COLOR_DARK: tuple[int, int, int] = (122, 80, 42)
+SHADOW_COLOR: tuple[int, int, int, int] = (0, 0, 0, 100)
+TEXT_COLOR: tuple[int, int, int] = (255, 244, 214)
+NAME_COLOR: tuple[int, int, int] = (255, 210, 96)
+HINT_COLOR: tuple[int, int, int] = (200, 172, 116)
+INPUT_BG: tuple[int, int, int] = (44, 29, 18)
+INPUT_BORDER: tuple[int, int, int] = (170, 128, 64)
+PORTRAIT_BG: tuple[int, int, int] = (34, 22, 14)
 
 TYPEWRITER_CHARS_PER_SEC: float = 40.0
 
-# key_code -> (normal_char, shifted_char)
-_KEY_CHARS: dict[int, tuple[str, str]] = {
-    **{pygame.K_a + i: (chr(ord('a') + i), chr(ord('A') + i)) for i in range(26)},
-    pygame.K_0: ('0', ')'),
-    pygame.K_1: ('1', '!'),
-    pygame.K_2: ('2', '@'),
-    pygame.K_3: ('3', '#'),
-    pygame.K_4: ('4', '$'),
-    pygame.K_5: ('5', '%'),
-    pygame.K_6: ('6', '^'),
-    pygame.K_7: ('7', '&'),
-    pygame.K_8: ('8', '*'),
-    pygame.K_9: ('9', '('),
-    pygame.K_SPACE: (' ', ' '),
-    pygame.K_PERIOD: ('.', '>'),
-    pygame.K_COMMA: (',', '<'),
-    pygame.K_MINUS: ('-', '_'),
-    pygame.K_SLASH: ('/', '?'),
-    pygame.K_SEMICOLON: (';', ':'),
-    pygame.K_QUOTE: ("'", '"'),
-    pygame.K_EQUALS: ('=', '+'),
-}
+_RETRO_FONT_CANDIDATES: str = 'Cascadia Mono,Consolas,Lucida Console,Courier New'
+
+
+def _load_retro_font(size: int, bold: bool = False) -> pygame.font.Font:
+    return pygame.font.SysFont(_RETRO_FONT_CANDIDATES, size, bold=bold)
+
+
+def _make_portrait(source: pygame.Surface, size: int) -> pygame.Surface:
+    canvas: pygame.Surface = pygame.Surface((size, size), pygame.SRCALPHA)
+    canvas.fill(PORTRAIT_BG)
+    scale: float = min(size / source.get_width(), size / source.get_height())
+    w: int = max(1, int(source.get_width() * scale))
+    h: int = max(1, int(source.get_height() * scale))
+    scaled: pygame.Surface = pygame.transform.smoothscale(source, (w, h))
+    canvas.blit(scaled, ((size - w) // 2, (size - h) // 2))
+    return canvas
 
 
 class DialogBox:
-    def __init__(self) -> None:
+    def __init__(self, portrait: pygame.Surface | None = None) -> None:
         self.phase: DialogPhase = DialogPhase.CLOSED
         self.input_text: str = ''
-        self._wrapped_lines: list[str] = []
+        self._lines: list[str] = []
+        self._line_offsets: list[int] = []
+        self._scroll_offset: int = 0
         self._typewriter_progress: float = 0.0
         self._typewriter_total: int = 0
         self._pending_input: str | None = None
 
-        self._font_name: pygame.font.Font = pygame.font.SysFont(None, 30)
-        self._font_text: pygame.font.Font = pygame.font.SysFont(None, 26)
-        self._font_hint: pygame.font.Font = pygame.font.SysFont(None, 22)
+        self._font_name: pygame.font.Font = _load_retro_font(26, bold=True)
+        self._font_text: pygame.font.Font = _load_retro_font(40)
+        self._font_hint: pygame.font.Font = _load_retro_font(18)
+
+        self._portrait: pygame.Surface | None = (
+            _make_portrait(portrait, PORTRAIT_SIZE) if portrait is not None else None
+        )
+
+        available_h: int = (
+            BOX_HEIGHT
+            - 2 * BOX_PADDING
+            - self._font_name.get_linesize()
+            - 6
+            - self._font_hint.get_linesize()
+            - 6
+        )
+        self._visible_lines: int = max(1, available_h // self._font_text.get_linesize())
 
     @property
     def is_open(self) -> bool:
@@ -85,20 +107,45 @@ class DialogBox:
     def open(self) -> None:
         self.phase = DialogPhase.INPUT
         self.input_text = ''
+        pygame.key.start_text_input()
 
     def close(self) -> None:
         self.phase = DialogPhase.CLOSED
         self.input_text = ''
         self._pending_input = None
-        self._wrapped_lines = []
+        self._lines = []
+        self._line_offsets = []
+        self._scroll_offset = 0
         self._typewriter_progress = 0.0
+        pygame.key.stop_text_input()
 
     def show_response(self, text: str) -> None:
-        inner_width: int = SCREEN_WIDTH - 2 * BOX_MARGIN_X - 2 * BOX_PADDING
-        self._wrapped_lines = self._wrap_text(text, self._font_text, inner_width)
-        self._typewriter_total = sum(len(line) for line in self._wrapped_lines)
+        self._lines = self._wrap_text(text, self._font_text, CONTENT_W) or ['']
+
+        self._line_offsets = []
+        offset: int = 0
+        for line in self._lines:
+            self._line_offsets.append(offset)
+            offset += len(line) + 1
+
+        self._typewriter_total = offset
         self._typewriter_progress = 0.0
+        self._scroll_offset = 0
         self.phase = DialogPhase.RESPONSE
+
+    def _active_line_index(self) -> int:
+        progress: int = int(self._typewriter_progress)
+        index: int = 0
+        for i, line_offset in enumerate(self._line_offsets):
+            if progress > line_offset:
+                index = i
+            else:
+                break
+        return index
+
+    @property
+    def _max_scroll(self) -> int:
+        return max(0, len(self._lines) - self._visible_lines)
 
     def handle_input(self, input_state: InputState) -> None:
         if self.phase == DialogPhase.INPUT:
@@ -117,23 +164,29 @@ class DialogBox:
             self.phase = DialogPhase.WAITING
             return
 
-        just: pygame.key.ScancodeWrapper = pygame.key.get_just_pressed()
-        shift: bool = bool(pygame.key.get_mods() & pygame.KMOD_SHIFT)
-
-        if just[pygame.K_BACKSPACE]:
+        if input_state['backspace']:
             self.input_text = self.input_text[:-1]
-            return
 
-        for key_code, (normal, shifted) in _KEY_CHARS.items():
-            if just[key_code]:
-                self.input_text += shifted if shift else normal
+        self.input_text += input_state['text_input']
 
     def _handle_response_input(self, input_state: InputState) -> None:
         if input_state['close_shop']:
             self.close()
             return
+        if input_state['arrow_up']:
+            self._scroll_offset = max(0, self._scroll_offset - 1)
+        if input_state['arrow_down']:
+            self._scroll_offset = min(self._max_scroll, self._scroll_offset + 1)
         if input_state['confirm'] and self._is_typewriter_done:
-            self.close()
+            self._return_to_input()
+
+    def _return_to_input(self) -> None:
+        self.phase = DialogPhase.INPUT
+        self.input_text = ''
+        self._lines = []
+        self._line_offsets = []
+        self._scroll_offset = 0
+        self._typewriter_progress = 0.0
 
     def update(self, dt: float) -> None:
         if self.phase == DialogPhase.RESPONSE:
@@ -141,6 +194,12 @@ class DialogBox:
                 self._typewriter_progress + TYPEWRITER_CHARS_PER_SEC * dt,
                 float(self._typewriter_total),
             )
+            if not self._is_typewriter_done:
+                active_line: int = self._active_line_index()
+                if active_line >= self._scroll_offset + self._visible_lines:
+                    self._scroll_offset = min(
+                        self._max_scroll, active_line - self._visible_lines + 1
+                    )
 
     @property
     def _is_typewriter_done(self) -> bool:
@@ -152,19 +211,27 @@ class DialogBox:
         font: pygame.font.Font,
         max_width: int,
     ) -> list[str]:
-        words: list[str] = text.split(' ')
         lines: list[str] = []
-        current: str = ''
-        for word in words:
-            candidate: str = current + (' ' if current else '') + word
-            if font.size(candidate)[0] <= max_width:
-                current = candidate
-            else:
-                if current:
-                    lines.append(current)
-                current = word
-        if current:
-            lines.append(current)
+        paragraphs = text.split('\n')
+
+        for paragraph in paragraphs:
+            if not paragraph.strip():
+                lines.append('')
+                continue
+
+            words: list[str] = paragraph.split(' ')
+            current: str = ''
+            for word in words:
+                candidate: str = current + (' ' if current else '') + word
+                if font.size(candidate)[0] <= max_width:
+                    current = candidate
+                else:
+                    if current:
+                        lines.append(current)
+                    current = word
+            if current:
+                lines.append(current)
+
         return lines
 
     # ------------------------------------------------------------------ render
@@ -173,92 +240,110 @@ class DialogBox:
         if not self.is_open:
             return
 
-        box_x: int = BOX_MARGIN_X
-        box_y: int = SCREEN_HEIGHT - BOX_HEIGHT - BOX_MARGIN_BOTTOM
-        box_w: int = SCREEN_WIDTH - 2 * BOX_MARGIN_X
+        self._render_panel(screen)
 
-        bg: pygame.Surface = pygame.Surface((box_w, BOX_HEIGHT), pygame.SRCALPHA)
-        bg.fill(BOX_COLOR)
-        screen.blit(bg, (box_x, box_y))
-        pygame.draw.rect(screen, BORDER_COLOR, (box_x, box_y, box_w, BOX_HEIGHT), 2)
-
-        name_surf: pygame.Surface = self._font_name.render('Milo:', True, NAME_COLOR)
-        screen.blit(name_surf, (box_x + BOX_PADDING, box_y + BOX_PADDING))
-        content_y: int = box_y + BOX_PADDING + name_surf.get_height() + 4
+        name_surf: pygame.Surface = self._font_name.render('Milo', True, NAME_COLOR)
+        screen.blit(name_surf, (CONTENT_X, BOX_Y + BOX_PADDING))
+        content_y: int = BOX_Y + BOX_PADDING + name_surf.get_height() + 6
 
         if self.phase == DialogPhase.INPUT:
-            self._render_input(screen, box_x, box_y, box_w, content_y)
+            self._render_input(screen, content_y)
         elif self.phase == DialogPhase.WAITING:
-            self._render_waiting(screen, box_x, box_y, box_w)
+            self._render_waiting(screen)
         elif self.phase == DialogPhase.RESPONSE:
-            self._render_response(screen, box_x, box_y, box_w, content_y)
+            self._render_response(screen, content_y)
 
-    def _render_input(
-        self,
-        screen: pygame.Surface,
-        box_x: int,
-        box_y: int,
-        box_w: int,
-        content_y: int,
-    ) -> None:
-        field_x: int = box_x + BOX_PADDING
-        field_w: int = box_w - 2 * BOX_PADDING
-        field_h: int = 30
-        pygame.draw.rect(screen, INPUT_BG, (field_x, content_y, field_w, field_h))
-        pygame.draw.rect(screen, INPUT_BORDER, (field_x, content_y, field_w, field_h), 1)
+    def _render_panel(self, screen: pygame.Surface) -> None:
+        shadow: pygame.Surface = pygame.Surface((BOX_W, BOX_HEIGHT), pygame.SRCALPHA)
+        pygame.draw.rect(shadow, SHADOW_COLOR, (0, 0, BOX_W, BOX_HEIGHT), border_radius=BORDER_RADIUS)
+        screen.blit(shadow, (BOX_X + 6, BOX_Y + 6))
 
-        display: str = self.input_text + '_'
+        panel: pygame.Surface = pygame.Surface((BOX_W, BOX_HEIGHT), pygame.SRCALPHA)
+        pygame.draw.rect(panel, BOX_BG, (0, 0, BOX_W, BOX_HEIGHT), border_radius=BORDER_RADIUS)
+        screen.blit(panel, (BOX_X, BOX_Y))
+
+        pygame.draw.rect(
+            screen, BORDER_COLOR, (BOX_X, BOX_Y, BOX_W, BOX_HEIGHT),
+            width=3, border_radius=BORDER_RADIUS,
+        )
+        pygame.draw.rect(
+            screen, BORDER_COLOR_DARK,
+            (BOX_X + 4, BOX_Y + 4, BOX_W - 8, BOX_HEIGHT - 8),
+            width=1, border_radius=BORDER_RADIUS - 3,
+        )
+
+        if self._portrait is not None:
+            port_x: int = BOX_X + BOX_PADDING
+            port_y: int = BOX_Y + BOX_PADDING
+            pygame.draw.rect(
+                screen, PORTRAIT_BG, (port_x, port_y, PORTRAIT_SIZE, PORTRAIT_SIZE),
+                border_radius=10,
+            )
+            screen.blit(self._portrait, (port_x, port_y))
+            pygame.draw.rect(
+                screen, BORDER_COLOR, (port_x, port_y, PORTRAIT_SIZE, PORTRAIT_SIZE),
+                width=2, border_radius=10,
+            )
+
+    def _render_input(self, screen: pygame.Surface, content_y: int) -> None:
+        field_h: int = 32
+        pygame.draw.rect(
+            screen, INPUT_BG, (CONTENT_X, content_y, CONTENT_W, field_h), border_radius=6,
+        )
+        pygame.draw.rect(
+            screen, INPUT_BORDER, (CONTENT_X, content_y, CONTENT_W, field_h),
+            width=1, border_radius=6,
+        )
+
+        display: str = self.input_text
+        max_w: int = CONTENT_W - 10
+        while display and self._font_text.size(display)[0] > max_w:
+            display = display[1:]
+        display += '_'
+
         text_surf: pygame.Surface = self._font_text.render(display, True, TEXT_COLOR)
-        screen.blit(text_surf, (field_x + 4, content_y + 4))
+        screen.blit(text_surf, (CONTENT_X + 6, content_y + 5))
 
         hint_surf: pygame.Surface = self._font_hint.render(
             'ENTER para enviar  •  ESC para fechar', True, HINT_COLOR
         )
-        hint_y: int = box_y + BOX_HEIGHT - BOX_PADDING - hint_surf.get_height()
-        screen.blit(hint_surf, (box_x + (box_w - hint_surf.get_width()) // 2, hint_y))
+        hint_y: int = BOX_Y + BOX_HEIGHT - BOX_PADDING - hint_surf.get_height()
+        screen.blit(hint_surf, (CONTENT_X + (CONTENT_W - hint_surf.get_width()) // 2, hint_y))
 
-    def _render_waiting(
-        self,
-        screen: pygame.Surface,
-        box_x: int,
-        box_y: int,
-        box_w: int,
-    ) -> None:
+    def _render_waiting(self, screen: pygame.Surface) -> None:
         dots_surf: pygame.Surface = self._font_text.render('. . .', True, TEXT_COLOR)
         screen.blit(
             dots_surf,
             (
-                box_x + (box_w - dots_surf.get_width()) // 2,
-                box_y + (BOX_HEIGHT - dots_surf.get_height()) // 2,
+                CONTENT_X + (CONTENT_W - dots_surf.get_width()) // 2,
+                BOX_Y + (BOX_HEIGHT - dots_surf.get_height()) // 2,
             ),
         )
 
-    def _render_response(
-        self,
-        screen: pygame.Surface,
-        box_x: int,
-        box_y: int,
-        box_w: int,
-        content_y: int,
-    ) -> None:
-        chars_left: int = int(self._typewriter_progress)
+    def _render_response(self, screen: pygame.Surface, content_y: int) -> None:
+        progress: int = int(self._typewriter_progress)
         line_h: int = self._font_text.get_linesize()
         y: int = content_y
+        visible_end: int = min(self._scroll_offset + self._visible_lines, len(self._lines))
 
-        for line in self._wrapped_lines:
-            if chars_left <= 0:
+        for i in range(self._scroll_offset, visible_end):
+            line: str = self._lines[i]
+            revealed: int = max(0, min(len(line), progress - self._line_offsets[i]))
+            if revealed <= 0 and progress <= self._line_offsets[i]:
                 break
-            visible: str = line[:chars_left]
-            screen.blit(
-                self._font_text.render(visible, True, TEXT_COLOR),
-                (box_x + BOX_PADDING, y),
-            )
+            if line: 
+                screen.blit(
+                    self._font_text.render(line[:revealed], True, TEXT_COLOR),
+                    (CONTENT_X, y),
+                )
             y += line_h
-            chars_left -= len(line)
 
         if self._is_typewriter_done:
-            cont_surf: pygame.Surface = self._font_hint.render(
-                '[ ENTER para continuar ]', True, HINT_COLOR
+            can_scroll: bool = len(self._lines) > self._visible_lines
+            hint_text: str = (
+                '↑↓ rolar  •  ENTER continuar  •  ESC fechar' if can_scroll
+                else 'ENTER para continuar  •  ESC para fechar'
             )
-            cont_y: int = box_y + BOX_HEIGHT - BOX_PADDING - cont_surf.get_height()
-            screen.blit(cont_surf, (box_x + (box_w - cont_surf.get_width()) // 2, cont_y))
+            hint_surf: pygame.Surface = self._font_hint.render(hint_text, True, HINT_COLOR)
+            hint_y: int = BOX_Y + BOX_HEIGHT - BOX_PADDING - hint_surf.get_height()
+            screen.blit(hint_surf, (CONTENT_X + (CONTENT_W - hint_surf.get_width()) // 2, hint_y))
