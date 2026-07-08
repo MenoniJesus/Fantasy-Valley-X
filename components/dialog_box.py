@@ -74,7 +74,7 @@ class DialogBox:
         self._pending_input: str | None = None
 
         self._font_name: pygame.font.Font = _load_retro_font(26, bold=True)
-        self._font_text: pygame.font.Font = _load_retro_font(40)
+        self._font_text: pygame.font.Font = _load_retro_font(20)
         self._font_hint: pygame.font.Font = _load_retro_font(18)
 
         self._portrait: pygame.Surface | None = (
