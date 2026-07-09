@@ -6,7 +6,7 @@ from ai.ports.ai_port import AIPort, AI_FALLBACK_MESSAGE
 
 logger = logging.getLogger(__name__)
 
-MAX_ATTEMPTS: int = 3 
+MAX_ATTEMPTS: int = 1
 
 
 class OllamaAdapter(AIPort):
