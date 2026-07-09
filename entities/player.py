@@ -81,6 +81,7 @@ class Player(DynamicObject):
         self.add_component('animation', Animation(clips=clips, initial_state='idle_down'))
         self.add_component('axe_sound', Sound('assets/sounds/sfx/axe.mp3'))
         self.add_component('hoe_sound', Sound('assets/sounds/sfx/hoe.wav'))
+        self.add_component('water_sound', Sound('assets/sounds/sfx/water.mp3'))
 
     def _load_clip(self, folder_path: str) -> list[pygame.Surface]:
         frames: list[pygame.Surface] = [

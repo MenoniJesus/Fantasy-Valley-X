@@ -455,12 +455,14 @@ class WorldGame:
 
             if item.item_type == 'tool' and item.name == 'hoe':
                 animation.set_state(f'{direction}_hoe')
+                self.sound_system.play_sound(self.player.get_component('hoe_sound'))
                 self.tool_animation_active = True
                 self.tool_animation_timer = 0
                 self._use_hoe(tx, ty)
 
             elif item.item_type == 'tool' and item.name == 'water':
                 animation.set_state(f'{direction}_water')
+                self.sound_system.play_sound(self.player.get_component('water_sound'))
                 self.tool_animation_active = True
                 self.tool_animation_timer = 0
                 self._use_water(tx, ty)
